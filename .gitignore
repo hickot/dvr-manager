@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+**/data/
+**/recordings/
+**/camera-test.mp4
+**/segment-test/
+**/app-test.*.log
+.vs/
+.idea/

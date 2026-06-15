@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DVR Manager</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <span class="eyebrow">CENTRAL DE GRAVAÇÃO</span>
+      <h1>DVR Manager</h1>
+    </div>
+    <button class="primary" id="add-camera">+ Adicionar câmera</button>
+  </header>
+
+  <main>
+    <section class="metrics" aria-label="Resumo do sistema">
+      <article><span>Câmeras</span><strong id="camera-count">0</strong></article>
+      <article><span>Gravando agora</span><strong id="active-count">0</strong></article>
+      <article><span>Armazenamento</span><strong id="storage-usage">0 GB</strong></article>
+      <article><span>FFmpeg</span><strong id="ffmpeg-status">Verificando</strong></article>
+    </section>
+
+    <section class="content">
+      <div class="section-title">
+        <div><span class="eyebrow">DISPOSITIVOS</span><h2>Câmeras cadastradas</h2></div>
+        <button class="secondary" id="refresh">Atualizar</button>
+      </div>
+      <div id="notice" class="notice hidden"></div>
+      <div id="camera-grid" class="camera-grid"></div>
+      <div id="empty-state" class="empty hidden">
+        <h3>Nenhuma câmera cadastrada</h3>
+        <p>Adicione uma câmera ONVIF usando a URL RTSP fornecida pelo equipamento.</p>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="camera-dialog">
+    <form id="camera-form">
+      <div class="modal-header">
+        <div><span class="eyebrow">CONFIGURAÇÃO</span><h2 id="form-title">Nova câmera</h2></div>
+        <button type="button" class="icon-button" id="close-dialog" aria-label="Fechar">×</button>
+      </div>
+      <input type="hidden" id="camera-id">
+      <label>Nome da câmera<input id="name" required maxlength="100" placeholder="Ex.: Entrada principal"></label>
+      <label>URL do stream RTSP<input id="rtsp-url" required type="url" placeholder="rtsp://192.168.1.20:554/stream1"></label>
+      <div class="two-columns">
+        <label>Usuário<input id="username" autocomplete="username" placeholder="admin"></label>
+        <label>Senha<input id="password" type="password" autocomplete="new-password" placeholder="Manter senha atual"></label>
+      </div>
+      <label>Duração de cada arquivo (minutos)<input id="segment-minutes" type="number" min="1" max="1440" value="15" required></label>
+      <label>Transporte RTSP
+        <select id="rtsp-transport">
+          <option value="auto">Automático</option>
+          <option value="tcp">TCP</option>
+          <option value="udp">UDP</option>
+        </select>
+      </label>
+      <label>Diretório de armazenamento
+        <div class="path-picker">
+          <input id="storage-path" readonly placeholder="Usar o diretório padrão">
+          <button type="button" class="secondary" id="choose-storage-path">Escolher pasta</button>
+        </div>
+        <small id="storage-path-help">Deixe vazio para usar o diretório padrão.</small>
+      </label>
+      <label class="toggle"><input id="enabled" type="checkbox" checked><span>Gravar automaticamente</span></label>
+      <div class="form-error hidden" id="form-error"></div>
+      <div class="modal-actions">
+        <button type="button" class="secondary" id="cancel-dialog">Cancelar</button>
+        <button type="submit" class="primary">Salvar câmera</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="directory-dialog" class="directory-dialog">
+    <div class="directory-picker">
+      <div class="modal-header">
+        <div><span class="eyebrow">ARMAZENAMENTO</span><h2>Escolher pasta</h2></div>
+        <button type="button" class="icon-button" id="close-directory-dialog" aria-label="Fechar">×</button>
+      </div>
+      <div class="directory-toolbar">
+        <button type="button" class="secondary" id="directory-up">Subir</button>
+        <div id="directory-current" class="directory-current">Unidades disponíveis</div>
+      </div>
+      <div id="directory-error" class="form-error hidden"></div>
+      <div id="directory-list" class="directory-list"></div>
+      <div class="modal-actions">
+        <button type="button" class="secondary" id="use-default-directory">Usar padrão</button>
+        <button type="button" class="secondary" id="cancel-directory">Cancelar</button>
+        <button type="button" class="primary" id="select-directory">Selecionar esta pasta</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
