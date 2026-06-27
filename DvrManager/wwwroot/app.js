@@ -16,6 +16,7 @@ let systemStatus = null;
 let currentDirectory = null;
 let parentDirectory = null;
 let liveCameraId = null;
+let selectedLiveCameraId = null;
 
 async function request(url, options = {}) {
   const response = await fetch(url, {
@@ -75,10 +76,14 @@ function render() {
 }
 
 function renderLiveCameraOptions() {
-  const selected = liveCameraId || liveCameraSelect.value;
+  const selected = liveCameraId || selectedLiveCameraId || liveCameraSelect.value || (cameras.length === 1 ? cameras[0].id : '');
   liveCameraSelect.innerHTML = '<option value="">Selecione uma camera cadastrada</option>' +
     cameras.map(camera => `<option value="${camera.id}">${escapeHtml(camera.name)}</option>`).join('');
-  liveCameraSelect.value = cameras.some(camera => camera.id === selected) ? selected : '';
+
+  const hasSelectedCamera = cameras.some(camera => camera.id === selected);
+  liveCameraSelect.value = hasSelectedCamera ? selected : '';
+  selectedLiveCameraId = hasSelectedCamera ? selected : null;
+  liveCameraSelect.disabled = cameras.length === 0;
   startLiveButton.disabled = cameras.length === 0;
 
   if (liveCameraId && !cameras.some(camera => camera.id === liveCameraId)) {
@@ -86,7 +91,7 @@ function renderLiveCameraOptions() {
   }
 }
 
-async function startLive(id = liveCameraSelect.value) {
+async function startLive(id = liveCameraSelect.value || (cameras.length === 1 ? cameras[0].id : '')) {
   if (!id) {
     showLiveStatus('Selecione uma camera para iniciar a visualizacao.', true);
     return;
@@ -95,6 +100,7 @@ async function startLive(id = liveCameraSelect.value) {
   const camera = cameras.find(item => item.id === id);
   stopLive(false);
   liveCameraId = id;
+  selectedLiveCameraId = id;
   liveCameraSelect.value = id;
   livePlayer.src = `${api}/${id}/live?t=${Date.now()}`;
   livePlayer.classList.remove('hidden');
@@ -198,7 +204,8 @@ form.addEventListener('submit', async event => {
   };
 
   try {
-    await request(id ? `${api}/${id}` : api, { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+    const savedCamera = await request(id ? `${api}/${id}` : api, { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+    selectedLiveCameraId = savedCamera.id;
     dialog.close();
     await load();
   } catch (error) {
@@ -228,6 +235,10 @@ function escapeAttribute(value) { return escapeHtml(value).replaceAll('`', '&#96
 
 document.querySelector('#add-camera').addEventListener('click', () => openForm());
 document.querySelector('#refresh').addEventListener('click', load);
+liveCameraSelect.addEventListener('change', () => {
+  selectedLiveCameraId = liveCameraSelect.value || null;
+  if (selectedLiveCameraId) showLiveStatus('Camera selecionada. Clique em visualizar ao vivo.');
+});
 startLiveButton.addEventListener('click', () => startLive());
 stopLiveButton.addEventListener('click', () => stopLive());
 livePlayer.addEventListener('error', () => {
