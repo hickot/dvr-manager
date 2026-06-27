@@ -23,6 +23,28 @@
       <article><span>FFmpeg</span><strong id="ffmpeg-status">Verificando</strong></article>
     </section>
 
+    <section class="live-view" aria-label="Visualizacao ao vivo">
+      <div class="section-title">
+        <div><span class="eyebrow">AO VIVO</span><h2>Visualizar camera</h2></div>
+        <button class="secondary" id="stop-live" disabled>Parar visualizacao</button>
+      </div>
+      <div class="live-panel">
+        <div class="live-controls">
+          <label>Camera
+            <select id="live-camera-select">
+              <option value="">Selecione uma camera cadastrada</option>
+            </select>
+          </label>
+          <button class="primary" id="start-live" type="button">Visualizar ao vivo</button>
+        </div>
+        <div class="live-player-frame">
+          <video id="live-player" controls playsinline class="hidden"></video>
+          <div id="live-placeholder" class="live-placeholder">Selecione uma camera para visualizar audio e video em tempo real.</div>
+        </div>
+        <div id="live-status" class="live-status">Nenhuma camera em visualizacao.</div>
+      </div>
+    </section>
+
     <section class="content">
       <div class="section-title">
         <div><span class="eyebrow">DISPOSITIVOS</span><h2>Câmeras cadastradas</h2></div>

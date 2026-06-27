@@ -5,10 +5,17 @@ const notice = document.querySelector('#notice');
 const dialog = document.querySelector('#camera-dialog');
 const form = document.querySelector('#camera-form');
 const directoryDialog = document.querySelector('#directory-dialog');
+const livePlayer = document.querySelector('#live-player');
+const livePlaceholder = document.querySelector('#live-placeholder');
+const liveStatus = document.querySelector('#live-status');
+const liveCameraSelect = document.querySelector('#live-camera-select');
+const startLiveButton = document.querySelector('#start-live');
+const stopLiveButton = document.querySelector('#stop-live');
 let cameras = [];
 let systemStatus = null;
 let currentDirectory = null;
 let parentDirectory = null;
+let liveCameraId = null;
 
 async function request(url, options = {}) {
   const response = await fetch(url, {
@@ -46,6 +53,7 @@ async function loadSystem() {
 function render() {
   document.querySelector('#camera-count').textContent = cameras.length;
   empty.classList.toggle('hidden', cameras.length !== 0);
+  renderLiveCameraOptions();
   grid.innerHTML = cameras.map(camera => `
     <article class="camera-card">
       <div class="camera-preview">
@@ -57,12 +65,65 @@ function render() {
         <div class="stream-url" title="${escapeHtml(camera.rtspUrl)}">${escapeHtml(camera.rtspUrl)}</div>
         <div class="camera-meta"><span>${camera.rtspTransport.toUpperCase()} · ${camera.segmentMinutes} min</span><span>${camera.enabled ? 'Automática' : 'Manual'}</span></div>
         <div class="card-actions">
+          <button class="secondary" onclick="selectLiveCamera('${camera.id}')">Ao vivo</button>
           <button class="secondary" onclick="editCamera('${camera.id}')">Editar</button>
           <button class="secondary" onclick="toggleRecording('${camera.id}', '${camera.recording.state}')">${camera.recording.state === 'recording' ? 'Parar' : 'Gravar'}</button>
           <button class="danger" onclick="removeCamera('${camera.id}')">Remover</button>
         </div>
       </div>
     </article>`).join('');
+}
+
+function renderLiveCameraOptions() {
+  const selected = liveCameraId || liveCameraSelect.value;
+  liveCameraSelect.innerHTML = '<option value="">Selecione uma camera cadastrada</option>' +
+    cameras.map(camera => `<option value="${camera.id}">${escapeHtml(camera.name)}</option>`).join('');
+  liveCameraSelect.value = cameras.some(camera => camera.id === selected) ? selected : '';
+  startLiveButton.disabled = cameras.length === 0;
+
+  if (liveCameraId && !cameras.some(camera => camera.id === liveCameraId)) {
+    stopLive();
+  }
+}
+
+async function startLive(id = liveCameraSelect.value) {
+  if (!id) {
+    showLiveStatus('Selecione uma camera para iniciar a visualizacao.', true);
+    return;
+  }
+
+  const camera = cameras.find(item => item.id === id);
+  stopLive(false);
+  liveCameraId = id;
+  liveCameraSelect.value = id;
+  livePlayer.src = `${api}/${id}/live?t=${Date.now()}`;
+  livePlayer.classList.remove('hidden');
+  livePlaceholder.classList.add('hidden');
+  stopLiveButton.disabled = false;
+  showLiveStatus(`Conectando em ${camera ? camera.name : 'camera'}...`);
+
+  try {
+    await livePlayer.play();
+    showLiveStatus(`Visualizando ${camera ? camera.name : 'camera'} ao vivo.`);
+  } catch {
+    showLiveStatus('Stream carregado. Use o botao de play do video para iniciar.');
+  }
+}
+
+function stopLive(updateStatus = true) {
+  livePlayer.pause();
+  livePlayer.removeAttribute('src');
+  livePlayer.load();
+  liveCameraId = null;
+  livePlayer.classList.add('hidden');
+  livePlaceholder.classList.remove('hidden');
+  stopLiveButton.disabled = true;
+  if (updateStatus) showLiveStatus('Nenhuma camera em visualizacao.');
+}
+
+function showLiveStatus(message, isError = false) {
+  liveStatus.textContent = message;
+  liveStatus.classList.toggle('error', isError);
 }
 
 function openForm(camera = null) {
@@ -148,6 +209,7 @@ form.addEventListener('submit', async event => {
 });
 
 window.editCamera = id => openForm(cameras.find(camera => camera.id === id));
+window.selectLiveCamera = id => startLive(id);
 window.toggleRecording = async (id, state) => {
   try { await request(`${api}/${id}/${state === 'recording' ? 'stop' : 'start'}`, { method: 'POST' }); await load(); }
   catch (error) { showNotice(error.message); }
@@ -166,6 +228,13 @@ function escapeAttribute(value) { return escapeHtml(value).replaceAll('`', '&#96
 
 document.querySelector('#add-camera').addEventListener('click', () => openForm());
 document.querySelector('#refresh').addEventListener('click', load);
+startLiveButton.addEventListener('click', () => startLive());
+stopLiveButton.addEventListener('click', () => stopLive());
+livePlayer.addEventListener('error', () => {
+  if (liveCameraId) {
+    showLiveStatus('Nao foi possivel abrir o stream ao vivo desta camera.', true);
+  }
+});
 document.querySelector('#close-dialog').addEventListener('click', () => dialog.close());
 document.querySelector('#cancel-dialog').addEventListener('click', () => dialog.close());
 document.querySelector('#choose-storage-path').addEventListener('click', openDirectoryPicker);
