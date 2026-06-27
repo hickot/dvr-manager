@@ -3,15 +3,28 @@ using DvrManager.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
 builder.Services.Configure<DvrOptions>(builder.Configuration.GetSection("Dvr"));
 builder.Services.AddSingleton<CameraRepository>();
 builder.Services.AddSingleton<RecordingManager>();
+builder.Services.AddSingleton<LiveStreamManager>();
 builder.Services.AddHostedService<RecordingWorker>();
 
 var app = builder.Build();
 
 app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        context.Context.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+        context.Context.Response.Headers.Pragma = "no-cache";
+        context.Context.Response.Headers.Expires = "0";
+    }
+});
 
 var cameras = app.MapGroup("/api/cameras");
 
@@ -111,6 +124,21 @@ cameras.MapPost("/{id:guid}/stop", async (Guid id, CameraRepository repository, 
 
     await recordings.StopAsync(id);
     return Results.Ok(recordings.GetStatus(id));
+});
+
+cameras.MapGet("/{id:guid}/live", async (Guid id, CameraRepository repository, LiveStreamManager liveStream, HttpContext context) =>
+{
+    var camera = await repository.GetAsync(id);
+    if (camera is null)
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    context.Response.ContentType = "video/mp4";
+    context.Response.Headers.CacheControl = "no-store";
+    context.Response.Headers.Pragma = "no-cache";
+    await liveStream.StreamAsync(camera, context.Response.Body, context.RequestAborted);
 });
 
 app.MapGet("/api/system", (RecordingManager recordings) => Results.Ok(recordings.GetSystemStatus()));
